@@ -1,6 +1,7 @@
 import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
 import { sendEmail } from "./email";
@@ -32,6 +33,28 @@ function createAuth() {
           console.error(`[auth] password reset email failed for user ${user.id}: ${result.error}`);
           throw new Error("Password reset email could not be sent.");
         }
+      },
+    },
+    user: {
+      deleteUser: {
+        enabled: true,
+        beforeDelete: async (user) => {
+          const owned = await db().membership.findMany({
+            where: { userId: user.id, role: "OWNER" },
+            select: { organizationId: true, organization: { select: { name: true, _count: { select: { memberships: true } } } } },
+          });
+          for (const m of owned) {
+            const owners = await db().membership.count({ where: { organizationId: m.organizationId, role: "OWNER" } });
+            if (owners === 1 && m.organization._count.memberships > 1) {
+              throw new APIError("BAD_REQUEST", {
+                message: `You are the only owner of ${m.organization.name}. Make another member an owner or delete the organization first.`,
+              });
+            }
+          }
+          // Organizations where this user is the only member would be left empty, so remove them.
+          const solo = owned.filter((m) => m.organization._count.memberships === 1).map((m) => m.organizationId);
+          if (solo.length) await db().organization.deleteMany({ where: { id: { in: solo } } });
+        },
       },
     },
     session: {

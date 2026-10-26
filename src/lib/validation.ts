@@ -120,7 +120,7 @@ export const contactSchema = z.object({
   topic: z.enum(["general", "sales", "support", "privacy"]),
   message: z.string().trim().min(10, "Write at least 10 characters").max(5000, "Keep it under 5,000 characters"),
   /** Honeypot: real users never fill this hidden field. */
-  website: z.string().max(0).optional(),
+  website: z.string().max(500).optional(),
   /** Milliseconds since the form rendered; very fast submissions are treated as automated. */
   elapsedMs: z.coerce.number().optional(),
 });

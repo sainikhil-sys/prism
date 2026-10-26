@@ -18,6 +18,12 @@ export const site = {
   url: (clean(process.env.NEXT_PUBLIC_SITE_URL) ?? "http://localhost:3000").replace(/\/$/, ""),
   /** Date the legal documents were last revised (YYYY-MM-DD). */
   legalLastUpdated: "2026-10-26",
+  /** Set to true only after a qualified lawyer has reviewed the Privacy Policy and Terms. */
+  legalReviewed: false,
+  /** Regions where the hosting and database providers store data, e.g. "the United States (Vercel, Neon)". */
+  dataRegions: null as string | null,
+  /** Managed PostgreSQL provider in use, e.g. "Neon" or "Supabase". */
+  databaseProvider: null as string | null,
   operator: {
     /** Registered legal name of the business operating Prism. */
     legalName: null as string | null,

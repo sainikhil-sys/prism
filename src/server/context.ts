@@ -37,7 +37,9 @@ export class AuthError extends Error {
 
 /** Reads and validates the session cookie against the database. Cached per request. */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
-  const session = await auth().api.getSession({ headers: await headers() });
+  // Read the request first: it marks the route as dynamic before any server config is touched.
+  const requestHeaders = await headers();
+  const session = await auth().api.getSession({ headers: requestHeaders });
   if (!session) return null;
   return { id: session.user.id, name: session.user.name, email: session.user.email };
 });

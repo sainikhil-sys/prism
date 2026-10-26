@@ -5,7 +5,8 @@
 import Papa from "papaparse";
 import { z } from "zod";
 
-export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+/** Vercel limits function request bodies to 4.5 MB, so uploads stay below that. */
+export const MAX_IMPORT_BYTES = 4 * 1024 * 1024;
 export const MAX_IMPORT_ROWS = 50_000;
 export const MAX_REPORTED_ERRORS = 500;
 

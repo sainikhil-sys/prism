@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   cacheComponents: false,
   poweredByHeader: false,
   serverExternalPackages: ["pg"],
+  experimental: {
+    // CSV imports are capped at 4 MB (Vercel rejects function request bodies above 4.5 MB).
+    serverActions: { bodySizeLimit: "4.4mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {
