@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { predict, trainGbdt } from "@/lib/ml/gbdt";
 import { buildSeries, featureVector, periodStart, trainingMatrix, windowsFor } from "@/lib/ml/features";
-import { fitDemandModel, InsufficientDataError, runForecast, seasonalNaive } from "@/lib/ml/forecast";
+import { fitDemandModel, InsufficientDataError, MIN_PERIODS, runForecast, seasonalNaive } from "@/lib/ml/forecast";
 import { errorMetrics } from "@/lib/ml/metrics";
 import { DEFAULT_POLICY, optimizePrice, priceBounds } from "@/lib/ml/pricing";
 import { projectInventory } from "@/lib/ml/inventory";
@@ -96,6 +96,15 @@ describe("forecasting", () => {
     expect(res.metrics.mae).toBeLessThanOrEqual(res.baselineMetrics.mae * 1.05);
   });
 
+  it("succeeds at exactly the minimum history for each granularity", () => {
+    const daily = periods.slice(-MIN_PERIODS.DAILY);
+    expect(runForecast({ periods: daily, granularity: "DAILY", horizon: 7, futurePrice: 20, asOf: new Date("2025-09-10") }).future).toHaveLength(7);
+    const long = syntheticSales({ days: MIN_PERIODS.WEEKLY * 7 + 6, basePrice: 20, elasticity: -1.8, baseDemand: 8, seed: 12 });
+    const weekly = buildSeries(long.sales, long.competitor, "WEEKLY", { listPrice: 20 }).slice(-MIN_PERIODS.WEEKLY);
+    expect(weekly).toHaveLength(MIN_PERIODS.WEEKLY);
+    expect(runForecast({ periods: weekly, granularity: "WEEKLY", horizon: 4, futurePrice: 20, asOf: new Date("2025-09-10") }).future).toHaveLength(4);
+  });
+
   it("refuses to forecast with too little history", () => {
     expect(() =>
       runForecast({ periods: periods.slice(0, 40), granularity: "DAILY", horizon: 7, futurePrice: 20, asOf: new Date() }),
@@ -103,8 +112,9 @@ describe("forecasting", () => {
   });
 
   it("supports weekly granularity", () => {
-    const weekly = buildSeries(sales, competitor, "WEEKLY", { listPrice: 20 });
-    const res = runForecast({ periods: weekly, granularity: "WEEKLY", horizon: 4, futurePrice: 20, asOf: new Date("2025-09-10") });
+    const long = syntheticSales({ days: 300, basePrice: 20, elasticity: -1.8, baseDemand: 8, seed: 13 });
+    const weekly = buildSeries(long.sales, long.competitor, "WEEKLY", { listPrice: 20 });
+    const res = runForecast({ periods: weekly, granularity: "WEEKLY", horizon: 4, futurePrice: 20, asOf: new Date("2025-11-10") });
     expect(res.future).toHaveLength(4);
     expect(res.metrics.n).toBe(res.holdoutLength);
   });

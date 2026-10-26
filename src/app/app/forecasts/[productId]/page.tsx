@@ -53,7 +53,7 @@ export default async function ForecastDetailPage({ params }: PageProps<"/app/for
       <div className="flex flex-col gap-6">
         {header}
         <EmptyState icon={<ChartLineUpIcon />} title="No forecast yet">
-          Run a forecast to train a model on this product&apos;s sales history. Daily forecasts need at least 70 days of history; weekly forecasts need 30 weeks.
+          Run a forecast to train a model on this product&apos;s sales history. Daily forecasts need at least 70 days of history; weekly forecasts need 36 weeks.
         </EmptyState>
       </div>
     );

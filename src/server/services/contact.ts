@@ -24,7 +24,7 @@ export async function submitContact(input: ContactInput): Promise<ContactOutcome
     throw new UserError(`Too many messages from your network. Try again in ${Math.ceil(limit.retryAfter / 60)} minutes.`);
   }
   // Silently accept bot submissions without storing them, so bots get no signal to adapt.
-  if ((d.website && d.website.length > 0) || (d.elapsedMs !== undefined && d.elapsedMs < MIN_FILL_MS)) {
+  if ((d.website && d.website.length > 0) || (typeof d.elapsedMs === "number" && d.elapsedMs < MIN_FILL_MS)) {
     return { stored: false, reason: "spam" };
   }
 

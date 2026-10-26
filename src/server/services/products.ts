@@ -46,7 +46,8 @@ export async function listProducts(ctx: OrgContext, query: ProductListQuery) {
   const [items, total, categories] = await Promise.all([
     db().product.findMany({
       where,
-      orderBy: [{ [query.sort]: { sort: query.dir, nulls: "last" } }, { id: "asc" }],
+      // Only nullable columns accept a nulls ordering.
+      orderBy: [query.sort === "inventoryQty" ? { inventoryQty: { sort: query.dir, nulls: "last" } } : { [query.sort]: query.dir }, { id: "asc" }],
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

@@ -30,7 +30,7 @@ export const productSchema = z
       .string()
       .trim()
       .max(100)
-      .optional()
+      .nullish()
       .transform((v) => v || null),
     costPrice: money,
     currentPrice: money,
@@ -58,7 +58,7 @@ export const organizationSchema = z.object({
     .string()
     .trim()
     .max(100)
-    .optional()
+    .nullish()
     .transform((v) => v || null),
 });
 
@@ -95,14 +95,14 @@ export const competitorPriceSchema = z.object({
   sourceUrl: z
     .string()
     .trim()
-    .optional()
+    .nullish()
     .transform((v) => v || null)
     .refine((v) => v === null || /^https?:\/\/\S+$/.test(v), "Enter a URL starting with http:// or https://"),
   notes: z
     .string()
     .trim()
     .max(500)
-    .optional()
+    .nullish()
     .transform((v) => v || null),
 });
 
@@ -115,14 +115,14 @@ export const contactSchema = z.object({
     .string()
     .trim()
     .max(150)
-    .optional()
+    .nullish()
     .transform((v) => v || null),
   topic: z.enum(["general", "sales", "support", "privacy"]),
   message: z.string().trim().min(10, "Write at least 10 characters").max(5000, "Keep it under 5,000 characters"),
   /** Honeypot: real users never fill this hidden field. */
-  website: z.string().max(500).optional(),
+  website: z.string().max(500).nullish(),
   /** Milliseconds since the form rendered; very fast submissions are treated as automated. */
-  elapsedMs: z.coerce.number().optional(),
+  elapsedMs: z.coerce.number().nullish(),
 });
 
 export type ContactInput = z.input<typeof contactSchema>;
@@ -157,6 +157,6 @@ export const decisionSchema = z.object({
     .string()
     .trim()
     .max(1000)
-    .optional()
+    .nullish()
     .transform((v) => v || null),
 });

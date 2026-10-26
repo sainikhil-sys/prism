@@ -49,3 +49,5 @@ next-env.d.ts
 /blob-report
 /playwright/.cache
 !.env.example
+
+/tests/e2e/.fixtures

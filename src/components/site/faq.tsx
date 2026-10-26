@@ -5,7 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export const FAQ_ITEMS = [
   {
     q: "What data do I need?",
-    a: "A product list with unit cost and current price, and historical sales with a date, quantity and unit price per row. Daily forecasts need at least 70 days of history and weekly forecasts at least 30 weeks. Promotion flags, stock levels, supplier lead times and competitor prices are optional and improve what Prism can tell you.",
+    a: "A product list with unit cost and current price, and historical sales with a date, quantity and unit price per row. Daily forecasts need at least 70 days of history and weekly forecasts at least 36 weeks. Promotion flags, stock levels, supplier lead times and competitor prices are optional and improve what Prism can tell you.",
   },
   {
     q: "Will Prism change prices in my store automatically?",

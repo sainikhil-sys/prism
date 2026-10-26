@@ -17,7 +17,11 @@ import {
 } from "./features";
 import { errorMetrics, naiveScale, quantile, type ErrorMetrics } from "./metrics";
 
-export const MIN_PERIODS: Record<Granularity, number> = { DAILY: 70, WEEKLY: 30 };
+/**
+ * Minimum history so that, after the long rolling window and the backtest holdout, enough rows
+ * remain to train (see the unit test that forecasts at exactly this length).
+ */
+export const MIN_PERIODS: Record<Granularity, number> = { DAILY: 70, WEEKLY: 36 };
 
 export interface PriceStats {
   min: number;

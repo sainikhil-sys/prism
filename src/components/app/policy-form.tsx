@@ -69,7 +69,7 @@ export function PolicyForm({ defaults, disabled }: { defaults: Values; disabled:
               <option value="REVENUE">Revenue: price x units</option>
             </select>
           </Field>
-          <Field id="policy-granularity" label="Forecast granularity" hint="Daily needs 70+ days of history; weekly needs 30+ weeks." error={errors.granularity?.message}>
+          <Field id="policy-granularity" label="Forecast granularity" hint="Daily needs 70+ days of history; weekly needs 36+ weeks." error={errors.granularity?.message}>
             <select id="policy-granularity" className={SELECT} {...form.register("granularity")}>
               <option value="DAILY">Daily</option>
               <option value="WEEKLY">Weekly</option>
