@@ -1,0 +1,473 @@
+// Prisma schema for Prism. Every business table carries organizationId and every query in
+// src/server is scoped by it. See docs/ARCHITECTURE.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Authentication (fields required by Better Auth)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String       @id
+  name          String
+  email         String       @unique
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+enum Role {
+  OWNER
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+model Organization {
+  id                    String               @id @default(cuid())
+  name                  String
+  slug                  String               @unique
+  currency              String               @default("USD")
+  timezone              String               @default("UTC")
+  industry              String?
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  memberships           Membership[]
+  invitations           Invitation[]
+  pricingPolicy         PricingPolicy?
+  products              Product[]
+  sales                 SalesRecord[]
+  competitorPrices      CompetitorPrice[]
+  importJobs            ImportJob[]
+  modelVersions         ModelVersion[]
+  forecasts             Forecast[]
+  recommendations       PriceRecommendation[]
+  priceChanges          PriceChange[]
+  auditLogs             AuditLog[]
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           Role
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  email          String
+  role           Role
+  /// SHA-256 of the invitation token; the token itself is only shown once.
+  tokenHash      String       @unique
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+enum Objective {
+  REVENUE
+  MARGIN
+}
+
+enum Granularity {
+  DAILY
+  WEEKLY
+}
+
+model PricingPolicy {
+  id                     String       @id @default(cuid())
+  organizationId         String       @unique
+  objective              Objective    @default(MARGIN)
+  /// Minimum (price - cost) / price, as a fraction.
+  minMarginPct           Decimal      @default(0.10) @db.Decimal(5, 4)
+  /// Maximum relative change from the current price per recommendation.
+  maxChangePct           Decimal      @default(0.10) @db.Decimal(5, 4)
+  decisionHorizon        Int          @default(14)
+  forecastHorizon        Int          @default(28)
+  granularity            Granularity  @default(DAILY)
+  respectInventory       Boolean      @default(true)
+  priceRangeExpansionPct Decimal      @default(0.05) @db.Decimal(5, 4)
+  holdThresholdPct       Decimal      @default(0.005) @db.Decimal(5, 4)
+  updatedAt              DateTime     @updatedAt
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Catalog and data
+// ---------------------------------------------------------------------------
+
+model Product {
+  id               String                @id @default(cuid())
+  organizationId   String
+  sku              String
+  name             String
+  category         String?
+  costPrice        Decimal               @db.Decimal(12, 2)
+  currentPrice     Decimal               @db.Decimal(12, 2)
+  minPrice         Decimal?              @db.Decimal(12, 2)
+  maxPrice         Decimal?              @db.Decimal(12, 2)
+  inventoryQty     Int?
+  reorderPoint     Int?
+  leadTimeDays     Int?
+  active           Boolean               @default(true)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sales            SalesRecord[]
+  competitorPrices CompetitorPrice[]
+  modelVersions    ModelVersion[]
+  forecasts        Forecast[]
+  recommendations  PriceRecommendation[]
+  priceChanges     PriceChange[]
+
+  @@unique([organizationId, sku])
+  @@index([organizationId, name])
+}
+
+model SalesRecord {
+  id             String       @id @default(cuid())
+  organizationId String
+  productId      String
+  soldAt         DateTime
+  quantity       Int
+  unitPrice      Decimal      @db.Decimal(12, 2)
+  promotion      Boolean      @default(false)
+  orderId        String?
+  channel        String?
+  /// Deterministic key used to detect duplicate rows within an organization.
+  dedupeKey      String
+  importJobId    String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  importJob      ImportJob?   @relation(fields: [importJobId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, dedupeKey])
+  @@index([organizationId, productId, soldAt])
+  @@index([organizationId, soldAt])
+}
+
+enum CompetitorSource {
+  MANUAL
+  CSV
+}
+
+model CompetitorPrice {
+  id             String           @id @default(cuid())
+  organizationId String
+  productId      String
+  competitor     String
+  price          Decimal          @db.Decimal(12, 2)
+  observedAt     DateTime
+  source         CompetitorSource
+  sourceUrl      String?
+  notes          String?
+  importJobId    String?
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  importJob      ImportJob?       @relation(fields: [importJobId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, productId, competitor, observedAt])
+  @@index([organizationId, productId, observedAt])
+}
+
+enum ImportType {
+  PRODUCTS
+  SALES
+  COMPETITOR_PRICES
+}
+
+enum ImportStatus {
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+model ImportJob {
+  id               String            @id @default(cuid())
+  organizationId   String
+  type             ImportType
+  fileName         String
+  status           ImportStatus
+  totalRows        Int
+  importedRows     Int
+  duplicateRows    Int
+  errorRows        Int
+  /// Row-level errors: [{ row, field, message }], capped in size.
+  errors           Json
+  createdById      String
+  createdAt        DateTime          @default(now())
+  /// Set when the imported rows were removed with "Undo import".
+  undoneAt         DateTime?
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sales            SalesRecord[]
+  competitorPrices CompetitorPrice[]
+
+  @@index([organizationId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Models, forecasts and pricing decisions
+// ---------------------------------------------------------------------------
+
+model ModelVersion {
+  id              String                @id @default(cuid())
+  organizationId  String
+  productId       String
+  version         Int
+  algorithm       String
+  granularity     Granularity
+  params          Json
+  featureNames    Json
+  /// Serialized model (trees, base score, feature config).
+  artifact        Json
+  trainedFrom     String
+  trainedTo       String
+  trainRows       Int
+  /// Backtest metrics for the model and the seasonal naive baseline.
+  metrics         Json
+  baselineMetrics Json
+  dataQuality     Json
+  createdById     String
+  createdAt       DateTime              @default(now())
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product         Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  forecasts       Forecast[]
+  recommendations PriceRecommendation[]
+
+  @@unique([productId, version])
+  @@index([organizationId, createdAt])
+}
+
+model Forecast {
+  id             String          @id @default(cuid())
+  organizationId String
+  productId      String
+  modelVersionId String
+  granularity    Granularity
+  horizon        Int
+  warnings       Json
+  createdById    String
+  createdAt      DateTime        @default(now())
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  modelVersion   ModelVersion    @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+  points         ForecastPoint[]
+
+  @@index([organizationId, productId, createdAt])
+}
+
+enum ForecastPointKind {
+  BACKTEST
+  FUTURE
+}
+
+model ForecastPoint {
+  id         String            @id @default(cuid())
+  forecastId String
+  kind       ForecastPointKind
+  periodKey  String
+  predicted  Float
+  lower      Float?
+  upper      Float?
+  baseline   Float?
+  actual     Float?
+  price      Float?
+  forecast   Forecast          @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+
+  @@index([forecastId, kind, periodKey])
+}
+
+enum RecommendationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUPERSEDED
+  NO_RECOMMENDATION
+}
+
+model PriceRecommendation {
+  id               String               @id @default(cuid())
+  organizationId   String
+  productId        String
+  modelVersionId   String
+  status           RecommendationStatus
+  /// RECOMMENDED, HOLD, INFEASIBLE or INSUFFICIENT_PRICE_VARIATION from the optimizer.
+  outcome          String
+  message          String
+  objective        Objective
+  currentPrice     Decimal              @db.Decimal(12, 2)
+  recommendedPrice Decimal?             @db.Decimal(12, 2)
+  costPrice        Decimal              @db.Decimal(12, 2)
+  baseline         Json
+  best             Json?
+  candidates       Json
+  bounds           Json
+  bindingConstraints Json
+  explanation      Json?
+  assumptions      Json
+  /// Policy and product values used, so the decision can be audited later.
+  inputSnapshot    Json
+  createdById      String
+  createdAt        DateTime             @default(now())
+  decidedById      String?
+  decidedAt        DateTime?
+  decisionNote     String?
+  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product          Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  modelVersion     ModelVersion         @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+  priceChange      PriceChange?
+
+  @@index([organizationId, status, createdAt])
+  @@index([productId, createdAt])
+}
+
+model PriceChange {
+  id               String               @id @default(cuid())
+  organizationId   String
+  productId        String
+  oldPrice         Decimal              @db.Decimal(12, 2)
+  newPrice         Decimal              @db.Decimal(12, 2)
+  recommendationId String?              @unique
+  changedById      String
+  reason           String
+  createdAt        DateTime             @default(now())
+  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product          Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recommendation   PriceRecommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, productId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Audit, contact and rate limiting
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+}
+
+enum ContactDelivery {
+  STORED
+  EMAILED
+  EMAIL_FAILED
+}
+
+model ContactSubmission {
+  id            String          @id @default(cuid())
+  name          String
+  email         String
+  company       String?
+  topic         String
+  message       String
+  delivery      ContactDelivery @default(STORED)
+  deliveryError String?
+  /// SHA-256 of the client IP with a server-side salt; raw IPs are not stored.
+  ipHash        String
+  createdAt     DateTime        @default(now())
+
+  @@index([createdAt])
+}
+
+/// Shared by Better Auth's database rate limiter and the app's own limiter (keys prefixed "app:").
+/// lastRequest is a Unix timestamp in milliseconds; the app limiter uses it as the window start.
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
+}
