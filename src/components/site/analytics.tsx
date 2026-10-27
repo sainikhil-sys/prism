@@ -3,9 +3,13 @@
 import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, LazyMotion, m, useReducedMotion } from "motion/react";
+
 import { Button } from "@/components/ui/button";
 import { site } from "@/config/site";
+
+// Animation features load after the page is interactive, keeping them out of the initial bundle.
+const loadFeatures = () => import("./motion-features").then((mod) => mod.default);
 
 const CONSENT_KEY = "prism-analytics-consent";
 type Consent = "granted" | "denied" | null;
@@ -69,9 +73,10 @@ export function Analytics() {
           </Script>
         </>
       )}
+      <LazyMotion features={loadFeatures} strict>
       <AnimatePresence>
         {ready && consent === null && (
-          <motion.div
+          <m.div
             role="dialog"
             aria-live="polite"
             aria-label="Analytics consent"
@@ -96,9 +101,10 @@ export function Analytics() {
                 Decline
               </Button>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
+      </LazyMotion>
     </>
   );
 }

@@ -1,0 +1,18 @@
+== typecheck
+PASS
+== lint
+
+C:\Users\saini\OneDrive\Documents\Prism\prisma\stub-server-only.cjs
+  3:16  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+✖ 1 problem (1 error, 0 warnings)
+
+== unit+integration
+ Test Files  11 passed (11)
+      Tests  76 passed | 1 skipped (77)
+== migrations
+
+Database schema is up to date!
+lint PASS
+  3 skipped
+  33 passed (1.8m)

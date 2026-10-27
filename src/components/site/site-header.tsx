@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, LazyMotion, m, useReducedMotion } from "motion/react";
+
 import { ListIcon, XIcon } from "@phosphor-icons/react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+
+// Animation features load after the page is interactive, keeping them out of the initial bundle.
+const loadFeatures = () => import("./motion-features").then((mod) => mod.default);
 
 export const SITE_NAV = [
   { href: "/#features", label: "Product" },
@@ -65,9 +69,10 @@ export function SiteHeader() {
           {open ? <XIcon className="size-5" /> : <ListIcon className="size-5" />}
         </Button>
       </div>
+      <LazyMotion features={loadFeatures} strict>
       <AnimatePresence>
         {open && (
-          <motion.nav
+          <m.nav
             id="mobile-nav"
             aria-label="Main"
             initial={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
@@ -93,9 +98,10 @@ export function SiteHeader() {
                 <Link href="/sign-in">Sign in</Link>
               </Button>
             </div>
-          </motion.nav>
+          </m.nav>
         )}
       </AnimatePresence>
+      </LazyMotion>
     </header>
   );
 }
