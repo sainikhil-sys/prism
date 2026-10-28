@@ -1,8 +1,16 @@
 # Launch checklist
 
-Last updated 2026-10-27. Status values: **PASS** (verified by a test or measurement, evidence given), **FAIL** (defect exists), **BLOCKED** (needs credentials, infrastructure or access that is not available), **N/A** (outside this release).
+Last updated 2026-10-28. Status values: **PASS** (verified by a test or measurement, evidence given), **FAIL** (defect exists), **BLOCKED** (needs credentials, infrastructure or access that is not available), **N/A** (outside this release).
 
 **Launch decision: NOT READY.** The application builds and its critical journey passes end to end, but the site has not been deployed. Domain, HTTPS, production database, email delivery, analytics and Search Console are all BLOCKED on owner accounts, and the legal pages are drafts pending owner details and legal review.
+
+## Deployment status (2026-10-28)
+
+- Code is in the private GitHub repository `sainikhil-sys/prism` (`main` at `232b25a`, matching the local repository). `.env` is not in the repository.
+- Vercel project `prism` exists under `sainikhil-sys' projects` and is connected to that repository.
+- Production variables set: `APP_URL` and `NEXT_PUBLIC_SITE_URL` (both `https://prism-sainikhil-sys-projects.vercel.app`). That address is the expected default and must be confirmed after the first deploy.
+- **Not set:** `DATABASE_URL`, `DIRECT_DATABASE_URL`, `BETTER_AUTH_SECRET`, `IP_HASH_SALT`. Verified with `vercel env ls` on 2026-10-28. No deployment has been made, because the build runs `prisma migrate deploy` and would fail without a database URL.
+- Next step: add those four values (for example `vercel env add DATABASE_URL production` from the linked project folder), then run `vercel deploy --prod` or push to `main`.
 
 All verification below was run on Windows 11 against a local production build (`next build` and `next start`) with a local Prisma Postgres (PGlite) database. Nothing has been verified on Vercel or a managed database yet.
 
@@ -29,12 +37,12 @@ Defects found by these tests and fixed: forms sent `null` for empty optional fie
 
 | Check | Status | Evidence or blocker |
 | --- | --- | --- |
-| Custom domain connected | BLOCKED | No domain or Vercel project provided. Steps: OPERATIONS.md section 3 |
+| Custom domain connected | BLOCKED | Vercel project exists but is not deployed, and no domain was provided. Steps: OPERATIONS.md section 3 |
 | DNS and ownership verification | BLOCKED | Same |
 | HTTPS certificate valid, HTTP redirects to HTTPS | BLOCKED | Vercel provides both once the domain is attached; must be checked with `curl -I` |
 | Mixed content | PASS (local) | Pages load no third-party assets; fonts self-hosted; e2e checks zero console errors on public pages. Re-check on the domain |
 | Canonical URLs and redirects | PASS (local) | e2e asserts canonical link; set `NEXT_PUBLIC_SITE_URL` to the domain at build |
-| Production environment variables | BLOCKED | Need managed DB URL, secret, domain. List in README |
+| Production environment variables | BLOCKED | `APP_URL` and `NEXT_PUBLIC_SITE_URL` set on Vercel; the database URLs, `BETTER_AUTH_SECRET` and `IP_HASH_SALT` are still missing (checked 2026-10-28) |
 | Auth callbacks use production domain | BLOCKED | `APP_URL` drives Better Auth `baseURL` and trusted origins; set once the domain exists |
 | Favicon and browser metadata | PASS (local) | `icon.svg`, `apple-icon`, manifest, theme color; e2e checks icon link and title |
 | Unwanted platform branding removed | PASS | No "Made with" tags; Next.js scaffold assets deleted; `poweredByHeader: false` |
@@ -167,8 +175,8 @@ PASS as listed in the test results table. Realistic failures covered: invalid in
 
 ## Owner actions required
 
-1. Create the Neon (or Supabase) database and set `DATABASE_URL` and `DIRECT_DATABASE_URL`.
-2. Create the Vercel project, set environment variables, deploy.
+1. Add `DATABASE_URL`, `DIRECT_DATABASE_URL`, `BETTER_AUTH_SECRET` and `IP_HASH_SALT` to the Vercel project `prism` (Production), then deploy. The GitHub repository and Vercel project are already set up.
+2. Put a managed `TEST_DATABASE_URL` in the local `.env` and run `npm run test:integration` so the concurrency test runs on real PostgreSQL.
 3. Attach the custom domain and verify HTTPS.
 4. Set up Resend with SPF, DKIM and DMARC and a receiving mailbox; test delivery.
 5. Provide the WhatsApp number.
