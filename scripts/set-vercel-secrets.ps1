@@ -20,8 +20,11 @@ function New-Secret {
 }
 
 function Add-Secret([string]$Name, [string]$Value) {
-  vercel env add $Name --environment production --value $Value --sensitive --force --yes *> $null
-  if ($LASTEXITCODE -ne 0) { throw "Vercel rejected $Name (exit code $LASTEXITCODE). Nothing was printed to protect the value." }
+  # The CLI prints its banner on stderr; Windows PowerShell 5.1 would turn that into a terminating
+  # error under "Stop", so judge success by the exit code only and discard all output.
+  $ErrorActionPreference = "Continue"
+  $null = & vercel env add $Name --environment production --value $Value --sensitive --force --yes 2>&1
+  if ($LASTEXITCODE -ne 0) { throw "Vercel rejected $Name (exit code $LASTEXITCODE). Output hidden to protect the value." }
   Write-Host "  added $Name"
 }
 

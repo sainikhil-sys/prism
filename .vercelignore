@@ -1,0 +1,19 @@
+# Never upload local environment files: production variables come from Vercel.
+.env
+.env.*
+!.env.example
+
+# Local tooling and generated output
+node_modules
+.next
+src/generated
+.vercel
+.agents
+.claude
+skills-lock.json
+
+# Tests and evidence are not needed to build or run the app
+tests
+test-results
+playwright-report
+docs/evidence
