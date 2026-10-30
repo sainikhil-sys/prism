@@ -1,16 +1,19 @@
 # Launch checklist
 
-Last updated 2026-10-28. Status values: **PASS** (verified by a test or measurement, evidence given), **FAIL** (defect exists), **BLOCKED** (needs credentials, infrastructure or access that is not available), **N/A** (outside this release).
+Last updated 2026-10-31. Status values: **PASS** (verified by a test or measurement, evidence given), **FAIL** (defect exists), **BLOCKED** (needs credentials, infrastructure or access that is not available), **N/A** (outside this release).
 
 **Launch decision: NOT READY.** The application builds and its critical journey passes end to end, but the site has not been deployed. Domain, HTTPS, production database, email delivery, analytics and Search Console are all BLOCKED on owner accounts, and the legal pages are drafts pending owner details and legal review.
 
-## Deployment status (2026-10-28)
+## Deployment status (2026-10-31)
 
-- Code is in the private GitHub repository `sainikhil-sys/prism` (`main` at `232b25a`, matching the local repository). `.env` is not in the repository.
-- Vercel project `prism` exists under `sainikhil-sys' projects` and is connected to that repository.
-- Production variables set: `APP_URL` and `NEXT_PUBLIC_SITE_URL` (both `https://prism-sainikhil-sys-projects.vercel.app`). That address is the expected default and must be confirmed after the first deploy.
-- **Not set:** `DATABASE_URL`, `DIRECT_DATABASE_URL`, `BETTER_AUTH_SECRET`, `IP_HASH_SALT`. Verified with `vercel env ls` on 2026-10-28. No deployment has been made, because the build runs `prisma migrate deploy` and would fail without a database URL.
-- Next step: add those four values (for example `vercel env add DATABASE_URL production` from the linked project folder), then run `vercel deploy --prod` or push to `main`.
+- Code is in the private GitHub repository `sainikhil-sys/prism` (`main` at `232b25a`). `.env` is not in the repository.
+- **Active Vercel project:** `prism` under the team `sai-nikhil2` (account `cogniqasystems-2783`). This folder is linked to it. Production address: `https://prism-sai-nikhil2.vercel.app`.
+- Production variables set: `APP_URL` and `NEXT_PUBLIC_SITE_URL` (both that address).
+- **Not set:** `DATABASE_URL`, `DIRECT_DATABASE_URL`, `BETTER_AUTH_SECRET`, `IP_HASH_SALT` (checked with `vercel env ls` on 2026-10-31).
+- One production deployment exists (`prism-r5i2k5vxm`, 2026-10-30) and **failed** at `prisma migrate deploy` with "Connection url is empty", because no database URL was set. The application build itself was not reached.
+- To finish: run `powershell -ExecutionPolicy Bypass -File .scriptsset-vercel-secrets.ps1` from this folder (hidden prompts for the two database URLs; generates the two secrets), then `vercel deploy --prod`.
+- **Unused project to remove:** an earlier `prism` project under `sainikhil-sys' projects` is still connected to the GitHub repository, so pushes to `main` trigger failing builds there. Delete it or disconnect its Git integration (needs the `sainikhil-sys` account).
+- Tooling note: Vercel CLI 57 could not use new sign-in tokens ("Not authorized"); the global CLI was updated to 65.8.0.
 
 All verification below was run on Windows 11 against a local production build (`next build` and `next start`) with a local Prisma Postgres (PGlite) database. Nothing has been verified on Vercel or a managed database yet.
 
@@ -42,7 +45,7 @@ Defects found by these tests and fixed: forms sent `null` for empty optional fie
 | HTTPS certificate valid, HTTP redirects to HTTPS | BLOCKED | Vercel provides both once the domain is attached; must be checked with `curl -I` |
 | Mixed content | PASS (local) | Pages load no third-party assets; fonts self-hosted; e2e checks zero console errors on public pages. Re-check on the domain |
 | Canonical URLs and redirects | PASS (local) | e2e asserts canonical link; set `NEXT_PUBLIC_SITE_URL` to the domain at build |
-| Production environment variables | BLOCKED | `APP_URL` and `NEXT_PUBLIC_SITE_URL` set on Vercel; the database URLs, `BETTER_AUTH_SECRET` and `IP_HASH_SALT` are still missing (checked 2026-10-28) |
+| Production environment variables | BLOCKED | `APP_URL` and `NEXT_PUBLIC_SITE_URL` set on `sai-nikhil2/prism`; the database URLs, `BETTER_AUTH_SECRET` and `IP_HASH_SALT` are still missing (checked 2026-10-31) |
 | Auth callbacks use production domain | BLOCKED | `APP_URL` drives Better Auth `baseURL` and trusted origins; set once the domain exists |
 | Favicon and browser metadata | PASS (local) | `icon.svg`, `apple-icon`, manifest, theme color; e2e checks icon link and title |
 | Unwanted platform branding removed | PASS | No "Made with" tags; Next.js scaffold assets deleted; `poweredByHeader: false` |
@@ -175,7 +178,7 @@ PASS as listed in the test results table. Realistic failures covered: invalid in
 
 ## Owner actions required
 
-1. Add `DATABASE_URL`, `DIRECT_DATABASE_URL`, `BETTER_AUTH_SECRET` and `IP_HASH_SALT` to the Vercel project `prism` (Production), then deploy. The GitHub repository and Vercel project are already set up.
+1. Run `scripts/set-vercel-secrets.ps1` to add `DATABASE_URL`, `DIRECT_DATABASE_URL`, `BETTER_AUTH_SECRET` and `IP_HASH_SALT` to `sai-nikhil2/prism`, then deploy. Remove the unused `sainikhil-sys/prism` project.
 2. Put a managed `TEST_DATABASE_URL` in the local `.env` and run `npm run test:integration` so the concurrency test runs on real PostgreSQL.
 3. Attach the custom domain and verify HTTPS.
 4. Set up Resend with SPF, DKIM and DMARC and a receiving mailbox; test delivery.
