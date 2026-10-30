@@ -7,13 +7,30 @@ import { db } from "./db";
 import { sendEmail } from "./email";
 import { env } from "./env";
 
+/**
+ * Origins allowed to call the auth API: APP_URL, any extra TRUSTED_ORIGINS (comma-separated,
+ * e.g. a custom domain), and the hostnames Vercel assigns to this project. A Vercel project can
+ * answer on several production aliases, and sign-up must work on each of them.
+ */
+export function trustedOrigins(appUrl: string, source: Record<string, string | undefined> = process.env): string[] {
+  const origins = new Set<string>([new URL(appUrl).origin]);
+  for (const o of (source.TRUSTED_ORIGINS ?? "").split(",")) {
+    const v = o.trim();
+    if (v) origins.add(new URL(v).origin);
+  }
+  for (const host of [source.VERCEL_PROJECT_PRODUCTION_URL, source.VERCEL_BRANCH_URL, source.VERCEL_URL]) {
+    if (host) origins.add(`https://${host}`);
+  }
+  return [...origins];
+}
+
 function createAuth() {
   const e = env();
   return betterAuth({
     appName: "Prism",
     baseURL: e.APP_URL,
     secret: e.BETTER_AUTH_SECRET,
-    trustedOrigins: [e.APP_URL],
+    trustedOrigins: trustedOrigins(e.APP_URL),
     database: prismaAdapter(db(), { provider: "postgresql", transaction: true }),
     emailAndPassword: {
       enabled: true,
